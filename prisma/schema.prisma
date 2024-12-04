@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id             String    @id @default(cuid())
+  name           String?
+  email          String    @unique
+  hashedPassword String
+  bio            String?
+  location       String?
+  repositories   Repository[]
+  pullRequests   PullRequest[]
+  issues         Issue[]
+  comments       Comment[]
+  sshKeys        SSHKey[]
+  collaborations Collaboration[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model Repository {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  owner       User      @relation(fields: [ownerId], references: [id])
+  ownerId     String
+  isPrivate   Boolean   @default(false)
+  pullRequests PullRequest[]
+  issues      Issue[]
+  webhooks    Webhook[]
+  collaborations Collaboration[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([ownerId, name])
+}
+
+model SSHKey {
+  id          String    @id @default(cuid())
+  title       String
+  publicKey   String    @unique
+  fingerprint String    @unique
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  createdAt   DateTime  @default(now())
+}
+
+model Collaboration {
+  id           String    @id @default(cuid())
+  user         User      @relation(fields: [userId], references: [id])
+  userId       String
+  repository   Repository @relation(fields: [repositoryId], references: [id])
+  repositoryId String
+  role         String    @default("READ")
+  status       String    @default("PENDING")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([userId, repositoryId])
+}
+
+model PullRequest {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  status      String    @default("open") // open, closed, merged
+  repository  Repository @relation(fields: [repoId], references: [id])
+  repoId      String
+  author      User      @relation(fields: [authorId], references: [id])
+  authorId    String
+  sourceBranch String
+  targetBranch String
+  comments    Comment[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Issue {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  status      String    @default("open") // open, closed
+  repository  Repository @relation(fields: [repoId], references: [id])
+  repoId      String
+  author      User      @relation(fields: [authorId], references: [id])
+  authorId    String
+  comments    Comment[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Comment {
+  id            String    @id @default(cuid())
+  content       String
+  author        User      @relation(fields: [authorId], references: [id])
+  authorId      String
+  pullRequest   PullRequest? @relation(fields: [pullRequestId], references: [id])
+  pullRequestId String?
+  issue         Issue?    @relation(fields: [issueId], references: [id])
+  issueId       String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Webhook {
+  id          String    @id @default(cuid())
+  name        String
+  url         String
+  events      String // Comma-separated list of events
+  repository  Repository @relation(fields: [repoId], references: [id])
+  repoId      String
+  isActive    Boolean   @default(true)
+  secret      String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
